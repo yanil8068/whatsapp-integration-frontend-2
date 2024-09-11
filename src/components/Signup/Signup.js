@@ -1,16 +1,25 @@
 import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-const Signin = () => {
+const Signup = () => {
   let [email, setEmail] = useState("");
   let [password, setPassword] = useState("");
+  // let [DeveloperAppAccessToken, setDeveloperAppAccessToken] = useState("");
+
+  let navigate = useNavigate();
   // console.log("email", email);
   // console.log("password", password);
 
-  let SubmitForm = (e) => {
+  const SubmitForm = async (e) => {
     e.preventDefault();
     console.log("email", email);
     console.log("password", password);
-    console.log("email", email);
+    await axios.post("http://localhost:8055/users/register", {
+      email: email,
+      password: password,
+    });
+    navigate("/login");
   };
 
   return (
@@ -33,10 +42,17 @@ const Signin = () => {
           onChange={(e) => setPassword(e.target.value)}
         />
         <br />
+        {/* DeveloperAppAccessToken:{" "}
+        <input
+          type="text"
+          value={DeveloperAppAccessToken}
+          onChange={(e) => setDeveloperAppAccessToken(e.target.value)}
+        />
+        <br /> */}
         <button type="submit">signin</button>
       </form>
     </div>
   );
 };
 
-export default Signin;
+export default Signup;

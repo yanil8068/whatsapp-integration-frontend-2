@@ -24,7 +24,7 @@ const Login = () => {
         withCredentials: true,
       }
     );
-    navigate("/");
+    navigate("/provideaccesstoken");
   };
 
   return (
