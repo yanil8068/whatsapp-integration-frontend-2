@@ -16,14 +16,14 @@ const Redirecturl = () => {
     allWhatsappBusinessAccountsConnectedToApp,
     setAllWhatsappBusinessAccountsConnectedToApp,
   ] = useState("");
-  const [to, setTo] = useState();
+  const [to, setTo] = useState(null);
   const [customerTo, setCustomerTo] = useState();
   const [from, setFrom] = useState();
   const [msg, setMsg] = useState("");
   const [allChats, setAllChats] = useState([]);
   const [allChatsByCustomer, setAllChatsByCustomer] = useState([]);
   const [currentChats, setCurrentChats] = useState();
-  const [allCustomerNumbers, setAllCustomerNumbers] = useState();
+  const [allCustomerNumbers, setAllCustomerNumbers] = useState(null);
   const [decryptedToken, setDecryptedToken] = useState(null);
 
   const navigate = useNavigate();
@@ -43,14 +43,12 @@ const Redirecturl = () => {
   }, []);
 
   ////////////websocket
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [messageText, setMessageText] = useState("");
+
   const [messages, setMessages] = useState([]);
   const connection = useRef(null); // WebSocket connection reference
 
   const urll = "ws://localhost:8055/websocket";
-
+  //web1
   useEffect(() => {
     return () => {
       // Close WebSocket connection when the component unmounts to avoid memory leaks
@@ -60,7 +58,14 @@ const Redirecturl = () => {
     };
   }, []);
 
-  const handleShowCurrentChats = (e) => {
+  useEffect(() => {
+    if (to) {
+      handleShowCurrentChats();
+    }
+  }, [to]);
+
+  //web2
+  const handleShowCurrentChats = () => {
     // Create a new WebSocket connection if it doesn't exist
     if (
       !connection.current ||
@@ -69,81 +74,82 @@ const Redirecturl = () => {
       // Create new WebSocket connection
       connection.current = new WebSocket(urll);
 
+      //This is called when the WebSocket connection is successfully opened.
       connection.current.onopen = () => {
+        console.log("WebSocket connection opened");
+        console.log("to", to);
+        // Auth is handled by cookies, send a subscription message, Here, you send a subscription message to listen for messages from the Message collection.
+        // Send a subscription message to listen for messages from the Message collection
         connection.current.send(
           JSON.stringify({
-            type: "auth",
-            access_token: process.env.React_APP_DIRECTUS_TOKEN, // Send access token instead of email/password
+            type: "subscribe",
+            collection: "Message",
+            query: {
+              filter: {
+                _or: [
+                  {
+                    _and: [
+                      {
+                        From: {
+                          _eq: phoneNumberId, // Replace phoneNumberId with your actual variable
+                        },
+                      },
+                      {
+                        contacts_id: {
+                          _eq: to, // Replace phoneNumberId with your actual variable
+                        },
+                      },
+                    ],
+                  },
+                  {
+                    _and: [
+                      {
+                        From: {
+                          _eq: to, // Replace phoneNumberId with your actual variable
+                        },
+                      },
+                      {
+                        contacts_id: {
+                          _eq: phoneNumberId, // Replace phoneNumberId with your actual variable
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+              fields: ["*"], // Fetch all fields
+            },
           })
         );
       };
 
+      //This handles incoming messages from the WebSocket. It parses the data and passes it to handleReceiveMessage.
       connection.current.onmessage = (event) => {
         const data = JSON.parse(event.data);
         handleReceiveMessage(data);
       };
 
+      //This is called when the WebSocket connection is closed.
       connection.current.onclose = () => {
         console.log("WebSocket closed");
       };
     }
   };
 
+  //web3
   const handleReceiveMessage = (data) => {
     console.log("Received message", data);
 
-    if (data.type === "auth" && data.status === "ok") {
-      console.log("Authentication successful");
-      // Send subscription message after successful authentication
-      connection.current.send(
-        JSON.stringify({
-          type: "subscribe",
-          collection: "Message",
-          query: {
-            filter: {
-              _or: [
-                {
-                  from: {
-                    _eq: phoneNumberId,
-                  },
-                  contacts_id: {
-                    _eq: to,
-                  },
-                },
-                {
-                  from: {
-                    _eq: to,
-                  },
-                  contacts_id: {
-                    _eq: phoneNumberId,
-                  },
-                },
-              ],
-            },
-            fields: ["*", "user_created.first_name"], // Fetch all fields plus user's first name
-          },
-        })
-      );
-    }
-
-    if (data.type === "auth" && data.status === "ok") {
-      console.log("Authentication successful");
-      connection.current.send(
-        JSON.stringify({
-          type: "subscribe",
-          collection: "Message",
-          query: {
-            fields: ["*"],
-          },
-        })
-      );
-    }
-
+    //all messages
     if (data.type === "subscription" && data.event === "init") {
       // Initialize with existing messages
-      setMessages(data.data);
+      const sortedMessages = data.data.sort(
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+      );
+      setMessages(sortedMessages);
     }
 
+    //sent message
     if (data.type === "subscription" && data.event === "create") {
       // Add new message to the list
       setMessages((prevMessages) => [...prevMessages, data.data[0]]);
@@ -159,33 +165,11 @@ const Redirecturl = () => {
     }
   };
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-
-    if (
-      connection.current &&
-      connection.current.readyState === WebSocket.OPEN
-    ) {
-      connection.current.send(
-        JSON.stringify({
-          type: "items",
-          collection: "Message",
-          action: "create",
-          data: { text: messageText },
-        })
-      );
-      setMessageText(""); // Clear the input field
-    } else {
-      console.error("WebSocket is not open. Unable to send message.");
-    }
-  };
-
   ////////////websocket
 
   const [phoneNumberId, setPhoneNumberId] = useState();
   let clientId = process.env.REACT_APP_CLIENT_ID;
   let clientSecret = process.env.REACT_APP_CLIENT_SECRET;
-  const directusToken = process.env.REACT_APP_DIRECTUS_ADMINISTRATOR_TOKEN;
 
   ////////////////////////////////////////////////////entire flow correction code///////
 
@@ -582,12 +566,12 @@ const Redirecturl = () => {
                     _eq: phoneNumberId,
                   },
                   contacts_id: {
-                    _eq: to, ///////////////it was to before Message implementation
+                    _eq: "918552035822", ///////////////it was to before Message implementation
                   },
                 },
                 {
                   From: {
-                    _eq: to, /////it was customerTo before Message implementation
+                    _eq: "918552035822", /////it was customerTo before Message implementation
                   },
                   contacts_id: {
                     _eq: phoneNumberId,
@@ -750,9 +734,6 @@ const Redirecturl = () => {
                     <button
                       onClick={() => {
                         setTo(eachChat.id);
-                        setCustomerTo(91 + eachChat.id);
-                        //AllCurrentChats();
-                        handleShowCurrentChats();
                       }}
                       className="btn btn-secondary btn-sm btn-block w-100"
                     >

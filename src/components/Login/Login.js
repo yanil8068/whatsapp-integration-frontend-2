@@ -13,7 +13,7 @@ const Login = () => {
     e.preventDefault();
     console.log("email", email);
     console.log("password", password);
-    await axios.post(
+    const loginuser = await axios.post(
       "http://localhost:8055/auth/login",
       {
         email: email,
@@ -24,6 +24,7 @@ const Login = () => {
         withCredentials: true,
       }
     );
+    console.log("loginuser", loginuser);
     navigate("/provideaccesstoken");
   };
 
