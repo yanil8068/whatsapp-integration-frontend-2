@@ -5,7 +5,6 @@ import CryptoJS from "crypto-js"; // Import crypto-js for decryption
 import { useNavigate } from "react-router-dom";
 
 const Redirecturl = () => {
-  const [code, setCode] = useState();
   const [token, setToken] = useState(localStorage.getItem("accessToken") || "");
   const [projectsBusinessId, setProjectsBusinessId] = useState("");
   const [allBusiness, setAllBusiness] = useState("");
@@ -20,15 +19,13 @@ const Redirecturl = () => {
   const [customerTo, setCustomerTo] = useState();
   const [from, setFrom] = useState();
   const [msg, setMsg] = useState("");
-  const [allChats, setAllChats] = useState([]);
-  const [allChatsByCustomer, setAllChatsByCustomer] = useState([]);
-  const [currentChats, setCurrentChats] = useState();
+
   const [allCustomerNumbers, setAllCustomerNumbers] = useState(null);
   const [decryptedToken, setDecryptedToken] = useState(null);
 
   const navigate = useNavigate();
 
-  const secretKey = "your-secret-key"; // Use the same secret key
+  const secretKey = process.env.REACT_APP_CryptoJS_SECRET_KEY; // Use the same secret key
   useEffect(() => {
     // Retrieve the encrypted token from localStorage
     const encryptedToken = localStorage.getItem("DeveloperToken");
@@ -168,10 +165,6 @@ const Redirecturl = () => {
   ////////////websocket
 
   const [phoneNumberId, setPhoneNumberId] = useState();
-  let clientId = process.env.REACT_APP_CLIENT_ID;
-  let clientSecret = process.env.REACT_APP_CLIENT_SECRET;
-
-  ////////////////////////////////////////////////////entire flow correction code///////
 
   //1 start : after login getting all the whatsapp business accounts connected to the app from developer api and check if a particular business is newly created then add it to database
   useEffect(() => {
@@ -261,8 +254,6 @@ const Redirecturl = () => {
     }
   }, [token]);
 
-  const url = `https://graph.facebook.com/v15.0/oauth/access_token?client_id=${clientId}&redirect_uri=http://localhost:3000/redirecturl&client_secret=${clientSecret}&code=${code}`;
-
   //4 => now click on any one business name in All business then =>
   const getBusiness = async () => {
     const business = await axios.get(
@@ -298,9 +289,7 @@ const Redirecturl = () => {
     setCustomerTo(""); // Clear customer id
     setFrom(""); // Clear sender
     setMsg(""); // Clear message
-    setAllChats([]); // Clear all chats
-    setAllChatsByCustomer([]);
-    setCurrentChats([]); // Clear current chats
+
     setPhoneNumberId(""); // Clear phone number id
     await getwhatsappBuisnessId();
   };
@@ -438,16 +427,11 @@ const Redirecturl = () => {
 
     console.log("Phone Numbers:", UpdatedPhoneNumbers.data.data);
     setAllNumbersOfBusiness(UpdatedPhoneNumbers.data.data);
-    //////////edited now
   };
-
-  //9 is when we click on that particular number then it setPhoneNumberId() and From() then =>
 
   //10
   useEffect(() => {
     if (from) {
-      //getAllChats();
-      // getAllChatsByCustomer();
       getAllCustomerNumbersBusinessInteractedWith();
     }
   }, [from]);
@@ -473,131 +457,7 @@ const Redirecturl = () => {
     console.log("allCustomerNumbers", allCustomerNumbers.data.data);
     setAllCustomerNumbers(allCustomerNumbers.data.data);
   };
-  ////////////////////added this part
 
-  //11
-  const getAllChats = async () => {
-    const allChats = await axios.get(`http://localhost:8055/items/Message`, {
-      params: {
-        filter: {
-          From: {
-            _eq: phoneNumberId,
-          },
-        },
-      },
-      withCredentials: true,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    console.log("allChats", allChats.data.data);
-    setAllChats(allChats.data.data);
-    // Create a map to filter out duplicate contacts_id
-    const uniqueChats = allChats.data.data.reduce((acc, chat) => {
-      // Check if chat's contacts_id is already in the map
-      if (
-        !acc.some(
-          (existingChat) => existingChat.contacts_id === chat.contacts_id
-        )
-      ) {
-        acc.push(chat);
-      }
-      return acc;
-    }, []);
-
-    console.log("uniqueChats,", uniqueChats);
-    setAllChats(uniqueChats);
-  };
-
-  const getAllChatsByCustomer = async () => {
-    const allChatsByCustomer = await axios.get(
-      `http://localhost:8055/items/Message`,
-      {
-        params: {
-          filter: {
-            contacts_id: {
-              _eq: phoneNumberId,
-            },
-          },
-        },
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    console.log("allChatsByCustomer", allChatsByCustomer.data.data);
-    setAllChatsByCustomer(allChatsByCustomer.data.data);
-    // Create a map to filter out duplicate contacts_id
-    const uniqueChatsByCustomer = allChatsByCustomer.data.data.reduce(
-      (acc, chat) => {
-        // Check if chat's contacts_id is already in the map
-        if (
-          !acc.some(
-            (existingChat) => existingChat.phoneNumberId === chat.phoneNumberId
-          )
-        ) {
-          acc.push(chat);
-        }
-        return acc;
-      },
-      []
-    );
-
-    console.log("uniqueChatsByCustomer,", uniqueChatsByCustomer);
-    setAllChatsByCustomer(uniqueChatsByCustomer);
-  };
-
-  //12 on click of the button in All chats =>
-  //setTo(eachChat.contacts_id);
-  // setCustomerTo(91 + eachChat.contacts_id);
-  // 13
-  const AllCurrentChats = async () => {
-    console.log("cutomerTo", customerTo);
-    if (customerTo && phoneNumberId) {
-      const response = await axios.get(
-        `http://localhost:8055/items/Message`, //////////it was MessageSentByBusiness before Message
-        {
-          params: {
-            filter: {
-              _or: [
-                {
-                  From: {
-                    _eq: phoneNumberId,
-                  },
-                  contacts_id: {
-                    _eq: "918552035822", ///////////////it was to before Message implementation
-                  },
-                },
-                {
-                  From: {
-                    _eq: "918552035822", /////it was customerTo before Message implementation
-                  },
-                  contacts_id: {
-                    _eq: phoneNumberId,
-                  },
-                },
-              ],
-            },
-          },
-          withCredentials: true,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // Sort the chats by timestamp in ascending order (oldest first)
-      const sortedChats = response.data.data.sort(
-        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-      );
-
-      console.log("AllCurrentChats", sortedChats);
-      setCurrentChats(sortedChats);
-    }
-  };
-
-  //14 we write message and send message by click on send message
   //15
   const sendMessage = async () => {
     const sendMsg = await axios.post(
@@ -620,9 +480,6 @@ const Redirecturl = () => {
         },
       }
     );
-
-    let fromm = phoneNumberId.toString();
-    console.log("from", fromm);
 
     const saveToDirectus = await axios.post(
       "http://localhost:8055/items/Message", //////MessageSentByBusiness
@@ -652,8 +509,6 @@ const Redirecturl = () => {
       contacts_id: Number(`${to}`),
     };
 
-    setCurrentChats((prevChats) => [newMessage, ...prevChats]);
-
     // Clear the message input field
     setMsg("");
 
@@ -665,21 +520,14 @@ const Redirecturl = () => {
     allWhatsappBusinessAccountsConnectedToApp[0]?.id
   );
 
-  //////////////////////////////////////////////////////////////////websocket flow
-  // const connection = useRef(null); // WebSocket connection reference
-
-  //////////////////////////////////////////////////////////////////websocket flow
   const handleLogout = async () => {
-    // Retrieve the refresh token (from where it's stored)
-
     try {
       await axios.post(
         "http://localhost:8055/auth/logout",
         { mode: "session" },
-        { withCredentials: true } // Include credentials (cookies) in the request
+        { withCredentials: true }
       );
 
-      // Redirect to login page or another page
       navigate("/login");
     } catch (error) {
       console.error("Logout failed", error);
@@ -802,5 +650,3 @@ const Redirecturl = () => {
 };
 
 export default Redirecturl;
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -7,7 +7,7 @@ const ProvideAccessToken = () => {
   let [DeveloperToken, setDeveloperToken] = useState("");
 
   let navigate = useNavigate();
-  const secretKey = "your-secret-key"; // Use a strong, secret key
+  const secretKey = process.env.REACT_APP_CryptoJS_SECRET_KEY; // Use a strong, secret key
 
   const SubmitForm = async (e) => {
     e.preventDefault();
